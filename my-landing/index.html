@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>neirobot — AI-контент и автопостинг для Telegram</title>
+<meta name="description" content="Telegram-бот, который сам пишет и публикует контент в ваши соцсети. Подключите раз — канал работает без вас. 7 дней бесплатно.">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Space+Mono&display=swap');
+
+:root {
+  --bg: #070B14;
+  --bg-card: #0F172A;
+  --bg-secondary: #1E293B;
+  --primary: #6366F1;
+  --secondary: #8B5CF6;
+  --accent: #2DD4BF;
+  --text: #E2E8F0;
+  --text-muted: #94A3B8;
+  --border: rgba(255,255,255,0.08);
+  --border-hover: rgba(255,255,255,0.15);
+  --success: #10B981;
+  --font-h: 'Space Grotesk', system-ui, sans-serif;
+  --font-b: 'Inter', system-ui, sans-serif;
+  --font-m: 'Space Mono', monospace;
+  --r: 16px;
+  --r-sm: 10px;
+  --r-lg: 24px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.5);
+  --glow: 0 0 24px rgba(99,102,241,0.45);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--font-b);background:var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+ul{list-style:none}
+button{cursor:pointer;font-family:var(--font-b);border:none;background:none}
+h1,h2,h3{font-family:var(--font-h);line-height:1.2}
+h1{font-size:clamp(34px,6vw,68px);font-weight:700}
+h2{font-size:clamp(26px,4vw,44px);font-weight:600}
+h3{font-size:clamp(17px,2vw,22px);font-weight:500}
+
+.container{max-width:1160px;margin:0 auto;padding:0 24px}
+section{padding:96px 0}
+
+.gradient-text{
+  background:linear-gradient(135deg,#6366F1,#2DD4BF);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text
+}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:13px 26px;border-radius:12px;font-size:15px;font-weight:600;transition:all .22s ease;white-space:nowrap}
+.btn-primary{background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff;box-shadow:var(--glow)}
+.btn-primary:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 0 36px rgba(99,102,241,.65)}
+.btn-secondary{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{background:rgba(255,255,255,.1);border-color:var(--border-hover)}
+
+/* ── CARD ── */
+.card{background:rgba(15,23,42,.6);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:var(--r);padding:28px;transition:border-color .25s,transform .25s}
+.card:hover{border-color:var(--border-hover);transform:translateY(-4px)}
+
+/* ── BADGE ── */
+.badge{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;background:rgba(99,102,241,.13);border:1px solid rgba(99,102,241,.3);border-radius:100px;font-size:13px;font-weight:500;color:#a5b4fc}
+
+/* ── SECTION LABEL ── */
+.section-label{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px}
+
+/* ── REVEAL ANIMATIONS ── */
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .55s ease,transform .55s ease}
+.reveal.visible{opacity:1;transform:translateY(0)}
+.d1{transition-delay:.1s}.d2{transition-delay:.2s}.d3{transition-delay:.3s}
+.d4{transition-delay:.4s}.d5{transition-delay:.5s}.d6{transition-delay:.6s}
+
+/* ════════════════════════════════════════
+   HEADER
+════════════════════════════════════════ */
+.header{position:fixed;top:0;left:0;right:0;z-index:1000;transition:background .3s,border-color .3s}
+.header.scrolled{background:rgba(7,11,20,.88);backdrop-filter:blur(16px);border-bottom:1px solid var(--border)}
+.header__inner{display:flex;align-items:center;justify-content:space-between;height:68px;gap:24px}
+
+.logo{font-family:var(--font-h);font-size:21px;font-weight:700;display:flex;align-items:center;gap:8px}
+.logo__dot{width:8px;height:8px;background:var(--primary);border-radius:50%;box-shadow:0 0 10px var(--primary)}
+
+.nav{display:flex;align-items:center;gap:30px}
+.nav a{font-size:14px;color:var(--text-muted);font-weight:500;transition:color .2s}
+.nav a:hover{color:var(--text)}
+
+.burger{display:none;flex-direction:column;gap:5px;padding:4px}
+.burger span{display:block;width:22px;height:2px;background:var(--text);border-radius:2px;transition:all .3s}
+
+.mobile-menu{display:none;position:fixed;top:68px;left:0;right:0;background:rgba(7,11,20,.97);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:24px;flex-direction:column;gap:0;z-index:999}
+.mobile-menu.open{display:flex}
+.mobile-menu a{font-size:16px;color:var(--text-muted);font-weight:500;padding:14px 0;border-bottom:1px solid var(--border)}
+.mobile-menu .btn{width:100%;justify-content:center;margin-top:16px;border:none}
+
+/* ════════════════════════════════════════
+   HERO
+════════════════════════════════════════ */
+.hero{position:relative;min-height:100vh;display:flex;align-items:center;padding:120px 0 80px;overflow:hidden}
+
+.aurora{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.blob{position:absolute;border-radius:50%;filter:blur(80px)}
+.blob-1{width:600px;height:600px;background:radial-gradient(circle,#7c3aed,transparent 70%);top:-120px;left:-80px;opacity:.5;animation:b1 12s ease-in-out infinite alternate}
+.blob-2{width:500px;height:500px;background:radial-gradient(circle,#3b82f6,transparent 70%);top:80px;right:-60px;opacity:.4;animation:b2 15s ease-in-out infinite alternate}
+.blob-3{width:380px;height:380px;background:radial-gradient(circle,#2dd4bf,transparent 70%);bottom:-40px;left:42%;opacity:.25;animation:b3 10s ease-in-out infinite alternate}
+@keyframes b1{to{transform:translate(60px,40px) scale(1.15)}}
+@keyframes b2{to{transform:translate(-50px,30px) scale(1.1)}}
+@keyframes b3{to{transform:translate(30px,-20px) scale(1.2)}}
+
+.hero__inner{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+.hero__content{max-width:560px}
+.hero__badge{margin-bottom:22px}
+.hero__title{margin-bottom:22px;letter-spacing:-.02em}
+.hero__subtitle{font-size:17px;color:var(--text-muted);line-height:1.7;margin-bottom:34px}
+.hero__hint{font-size:13px;color:var(--text-muted);margin-top:11px}
+.hero__proof{display:flex;align-items:center;gap:10px;margin-top:22px}
+.stars{color:#fbbf24;font-size:14px;letter-spacing:1px}
+.hero__proof-text{font-size:14px;color:var(--text-muted)}
+.hero__proof-text strong{color:var(--text)}
+
+/* bot window */
+.hero__visual{position:relative;display:flex;justify-content:center}
+.bot-window{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px;width:100%;max-width:370px;box-shadow:var(--shadow),0 0 60px rgba(99,102,241,.15)}
+.bot-header{display:flex;align-items:center;gap:10px;padding-bottom:14px;border-bottom:1px solid var(--border);margin-bottom:14px}
+.bot-avatar{width:36px;height:36px;background:linear-gradient(135deg,var(--primary),var(--secondary));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.bot-name{font-weight:600;font-size:14px}
+.bot-status{font-size:11px;color:var(--success)}
+.chat{display:flex;flex-direction:column;gap:10px;min-height:130px}
+.msg{max-width:88%;padding:10px 14px;border-radius:14px;font-size:13px;line-height:1.5;font-family:var(--font-m)}
+.msg-user{align-self:flex-end;background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff;border-bottom-right-radius:4px}
+.msg-bot{align-self:flex-start;background:var(--bg-secondary);border:1px solid var(--border);border-bottom-left-radius:4px}
+.typing{display:flex;gap:4px;align-items:center;padding:14px}
+.td{width:6px;height:6px;background:var(--text-muted);border-radius:50%;animation:td 1.2s ease-in-out infinite}
+.td:nth-child(2){animation-delay:.2s}.td:nth-child(3){animation-delay:.4s}
+@keyframes td{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-6px);opacity:1}}
+
+/* floating cards */
+.fc{position:absolute;background:rgba(15,23,42,.9);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:12px;padding:9px 14px;font-size:13px;font-weight:500;white-space:nowrap;box-shadow:var(--shadow)}
+.fc-1{top:-18px;right:-18px;color:var(--success);animation:f1 4s ease-in-out infinite}
+.fc-2{bottom:48px;left:-28px;color:var(--accent);animation:f2 5s ease-in-out infinite}
+.fc-3{bottom:-8px;right:24px;color:#fbbf24;animation:f3 6s ease-in-out infinite}
+@keyframes f1{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-12px) rotate(1deg)}}
+@keyframes f2{0%,100%{transform:translateY(0) rotate(1deg)}50%{transform:translateY(-16px) rotate(-1deg)}}
+@keyframes f3{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+
+/* ════════════════════════════════════════
+   PROOF STRIP
+════════════════════════════════════════ */
+.proof-strip{padding:40px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.proof-strip__inner{display:flex;flex-direction:column;align-items:center;gap:30px}
+.platforms{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center}
+.platform-lbl{font-size:13px;color:var(--text-muted);margin-right:4px}
+.platform-pill{display:flex;align-items:center;gap:6px;padding:7px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:100px;font-size:13px;color:var(--text-muted);font-weight:500}
+.stats{display:flex;gap:56px;justify-content:center}
+.stat{text-align:center}
+.stat__num{font-family:var(--font-h);font-size:38px;font-weight:700;display:block;line-height:1;margin-bottom:5px}
+.stat__lbl{font-size:13px;color:var(--text-muted)}
+
+/* ════════════════════════════════════════
+   PROBLEM
+════════════════════════════════════════ */
+.problem{background:linear-gradient(180deg,transparent,rgba(99,102,241,.03),transparent)}
+.problem__header{text-align:center;margin-bottom:52px}
+.problem__sub{font-size:17px;color:var(--text-muted);margin-top:14px}
+.pain-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-bottom:44px}
+.pain-card{display:flex;gap:16px;align-items:flex-start}
+.pain-icon{font-size:28px;flex-shrink:0;margin-top:2px}
+.pain-title{font-size:16px;font-weight:600;margin-bottom:5px}
+.pain-text{font-size:14px;color:var(--text-muted);line-height:1.6}
+.problem__bridge{text-align:center;font-size:19px;font-weight:600;padding:26px 32px;background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.2);border-radius:var(--r)}
+.problem__bridge span{color:var(--primary)}
+
+/* ════════════════════════════════════════
+   HOW IT WORKS
+════════════════════════════════════════ */
+.how{background:var(--bg-card)}
+.how__header{text-align:center;margin-bottom:60px}
+.steps{display:flex;flex-direction:column;max-width:700px;margin:0 auto 44px}
+.step{display:flex;gap:22px;position:relative;padding-bottom:36px}
+.step:last-child{padding-bottom:0}
+.step__left{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.step__num{width:44px;height:44px;background:linear-gradient(135deg,var(--primary),var(--secondary));border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-h);font-weight:700;font-size:15px;color:#fff;box-shadow:0 0 16px rgba(99,102,241,.4)}
+.step__line{width:2px;flex:1;background:linear-gradient(to bottom,rgba(99,102,241,.4),rgba(99,102,241,.04));margin-top:8px}
+.step:last-child .step__line{display:none}
+.step__body{padding-top:8px}
+.step__title{font-size:17px;font-weight:600;margin-bottom:5px}
+.step__text{font-size:14px;color:var(--text-muted);line-height:1.6}
+.how__cta{text-align:center}
+
+/* ════════════════════════════════════════
+   LIVE DEMO
+════════════════════════════════════════ */
+.demo__header{text-align:center;margin-bottom:44px}
+.demo__sub{font-size:17px;color:var(--text-muted);margin-top:12px}
+.demo__wrap{max-width:660px;margin:0 auto}
+.niche-btns{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin-bottom:22px}
+.niche-btn{padding:7px 18px;border-radius:100px;font-size:14px;font-weight:500;background:var(--bg-card);border:1px solid var(--border);color:var(--text-muted);transition:all .2s}
+.niche-btn:hover{border-color:var(--primary);color:var(--text)}
+.niche-btn.active{background:rgba(99,102,241,.15);border-color:var(--primary);color:var(--primary)}
+
+.demo-window{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow),0 0 40px rgba(99,102,241,.1)}
+.demo-bar{display:flex;align-items:center;gap:12px;padding:13px 20px;background:var(--bg-secondary);border-bottom:1px solid var(--border)}
+.demo-dots{display:flex;gap:6px}
+.demo-dot{width:10px;height:10px;border-radius:50%}
+.demo-dot:nth-child(1){background:#EF4444}.demo-dot:nth-child(2){background:#F59E0B}.demo-dot:nth-child(3){background:#10B981}
+.demo-bar-title{font-size:13px;color:var(--text-muted);font-family:var(--font-m)}
+
+.demo-body{padding:22px}
+.demo-prompt-row{display:flex;gap:10px;align-items:flex-start;margin-bottom:18px}
+.demo-prompt-icon{width:32px;height:32px;background:rgba(99,102,241,.15);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.demo-prompt-txt{background:var(--bg-secondary);border:1px solid var(--border);border-radius:12px;padding:9px 13px;font-size:13px;color:var(--text-muted);font-family:var(--font-m)}
+.demo-status{font-size:12px;color:var(--accent);margin-bottom:10px;font-family:var(--font-m);min-height:18px}
+.demo-output{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:15px;font-size:13px;line-height:1.75;min-height:110px;font-family:var(--font-m);white-space:pre-wrap;color:var(--text)}
+.cursor{display:inline-block;width:2px;height:15px;background:var(--primary);animation:blink 1s infinite;vertical-align:middle;margin-left:1px}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+.demo-footer{padding:14px 22px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.demo-timer{font-size:12px;color:var(--text-muted)}
+.demo-regen{font-size:13px;color:var(--primary);font-weight:500;padding:6px 12px;border-radius:8px;transition:background .2s}
+.demo-regen:hover{background:rgba(99,102,241,.1)}
+.demo-cta{text-align:center;margin-top:28px}
+
+/* ════════════════════════════════════════
+   BENTO FEATURES
+════════════════════════════════════════ */
+.features__header{text-align:center;margin-bottom:52px}
+.bento{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
+.bc{background:rgba(15,23,42,.6);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:var(--r);padding:26px;transition:border-color .3s,transform .3s,box-shadow .3s}
+.bc:hover{border-color:rgba(99,102,241,.3);transform:translateY(-4px);box-shadow:0 8px 32px rgba(99,102,241,.1)}
+.bc--wide{grid-column:span 2}
+.bc__icon{width:46px;height:46px;background:rgba(99,102,241,.12);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:14px}
+.bc--accent .bc__icon{background:rgba(45,212,191,.12)}
+.bc__title{font-size:16px;font-weight:600;margin-bottom:7px}
+.bc__text{font-size:14px;color:var(--text-muted);line-height:1.6}
+
+/* ════════════════════════════════════════
+   BEFORE / AFTER
+════════════════════════════════════════ */
+.comparison{background:var(--bg-card)}
+.comparison__header{text-align:center;margin-bottom:44px}
+.comp-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;max-width:780px;margin:0 auto}
+.comp-col{border-radius:var(--r);padding:30px}
+.comp-col--bad{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2)}
+.comp-col--good{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.2)}
+.comp-head{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;margin-bottom:22px;font-family:var(--font-h)}
+.comp-col--bad .comp-head{color:#f87171}
+.comp-col--good .comp-head{color:#34d399}
+.comp-item{display:flex;gap:10px;margin-bottom:14px;font-size:14px;line-height:1.55;align-items:flex-start}
+.comp-item:last-child{margin-bottom:0}
+.ci{flex-shrink:0;margin-top:1px}
+
+/* ════════════════════════════════════════
+   TESTIMONIALS
+════════════════════════════════════════ */
+.testimonials__header{text-align:center;margin-bottom:52px}
+.testi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:44px}
+.testi-card{display:flex;flex-direction:column}
+.testi-stars{color:#fbbf24;font-size:15px;letter-spacing:2px;margin-bottom:14px}
+.testi-quote{font-size:14px;color:var(--text-muted);line-height:1.7;flex:1;margin-bottom:18px}
+.testi-author{display:flex;align-items:center;gap:11px}
+.testi-ava{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:#fff;flex-shrink:0}
+.ava-1{background:linear-gradient(135deg,#ec4899,#8b5cf6)}
+.ava-2{background:linear-gradient(135deg,#3b82f6,#06b6d4)}
+.ava-3{background:linear-gradient(135deg,#10b981,#3b82f6)}
+.testi-name{font-weight:600;font-size:14px}
+.testi-role{font-size:12px;color:var(--text-muted)}
+.testi-summary{display:flex;justify-content:center;align-items:center;gap:48px;flex-wrap:wrap}
+.ts-val{font-family:var(--font-h);font-size:30px;font-weight:700}
+.ts-lbl{font-size:13px;color:var(--text-muted);margin-top:2px}
+
+/* ════════════════════════════════════════
+   PRICING
+════════════════════════════════════════ */
+.pricing{background:var(--bg-card)}
+.pricing__header{text-align:center;margin-bottom:36px}
+.price-toggle{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:44px}
+.ptoggle-lbl{font-size:14px;color:var(--text-muted);font-weight:500}
+.toggle-wrap{position:relative;width:50px;height:27px}
+.toggle-wrap input{display:none}
+.toggle-track{position:absolute;inset:0;background:var(--bg-secondary);border:1px solid var(--border);border-radius:100px;cursor:pointer;transition:.3s}
+.toggle-track::before{content:'';position:absolute;width:19px;height:19px;border-radius:50%;background:var(--primary);top:3px;left:3px;transition:.3s}
+input:checked+.toggle-track{background:rgba(99,102,241,.2)}
+input:checked+.toggle-track::before{transform:translateX(23px)}
+.toggle-badge{display:inline-block;padding:3px 10px;background:rgba(45,212,191,.15);color:var(--accent);border-radius:100px;font-size:12px;font-weight:600}
+
+.price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;align-items:start}
+.price-card{background:rgba(15,23,42,.6);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:var(--r-lg);padding:30px;position:relative;transition:border-color .3s,transform .3s}
+.price-card:hover{border-color:rgba(99,102,241,.3)}
+.price-card--hit{border-color:rgba(99,102,241,.5);box-shadow:0 0 40px rgba(99,102,241,.15);transform:translateY(-8px)}
+.price-card--hit:hover{transform:translateY(-12px)}
+.price-popular{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff;font-size:12px;font-weight:700;padding:4px 16px;border-radius:100px;white-space:nowrap}
+.price-name{font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:18px}
+.price-amount-row{margin-bottom:6px}
+.price-cur{font-size:20px;font-weight:600;vertical-align:top;display:inline-block;margin-top:7px}
+.price-num{font-family:var(--font-h);font-size:42px;font-weight:700;line-height:1}
+.price-per{font-size:14px;color:var(--text-muted)}
+.price-day{font-size:12px;color:var(--text-muted);margin-bottom:22px}
+.price-features{margin-bottom:26px;display:flex;flex-direction:column;gap:9px}
+.pf{display:flex;align-items:flex-start;gap:9px;font-size:14px;color:var(--text-muted)}
+.pf--yes{color:var(--text)}
+.pf-check{color:var(--success);flex-shrink:0;margin-top:1px}
+.pf-dash{color:var(--bg-secondary);flex-shrink:0;margin-top:1px}
+.price-card .btn{width:100%;justify-content:center}
+.pricing__note{text-align:center;font-size:14px;color:var(--text-muted);margin-top:28px;line-height:1.7}
+.pricing__roi{text-align:center;margin:24px auto 0;padding:18px 28px;background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.15);border-radius:var(--r);max-width:580px;font-size:14px;color:var(--text-muted);line-height:1.7}
+.pricing__roi strong{color:var(--text)}
+
+/* ════════════════════════════════════════
+   FAQ
+════════════════════════════════════════ */
+.faq__header{text-align:center;margin-bottom:44px}
+.faq-list{max-width:700px;margin:0 auto;display:flex;flex-direction:column;gap:11px}
+.faq-item{border:1px solid var(--border);border-radius:var(--r);overflow:hidden;transition:border-color .2s}
+.faq-item.open{border-color:rgba(99,102,241,.35)}
+.faq-q{width:100%;display:flex;align-items:center;justify-content:space-between;padding:19px 22px;background:none;text-align:left;font-size:15px;font-weight:500;color:var(--text);gap:14px;transition:background .2s}
+.faq-q:hover{background:rgba(255,255,255,.03)}
+.faq-chevron{width:22px;height:22px;flex-shrink:0;border:1px solid var(--border);border-radius:6px;display:flex;align-items:center;justify-content:center;transition:transform .3s,background .2s;font-size:11px;color:var(--text-muted)}
+.faq-item.open .faq-chevron{transform:rotate(180deg);background:rgba(99,102,241,.15);color:var(--primary)}
+.faq-ans{max-height:0;overflow:hidden;transition:max-height .35s ease}
+.faq-ans-inner{padding:0 22px 18px;font-size:14px;color:var(--text-muted);line-height:1.7}
+
+/* ════════════════════════════════════════
+   FINAL CTA
+════════════════════════════════════════ */
+.final-cta{position:relative;overflow:hidden;text-align:center}
+.final-cta::before{content:'';position:absolute;width:600px;height:600px;background:radial-gradient(circle,rgba(99,102,241,.25),transparent 70%);border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);filter:blur(60px);pointer-events:none}
+.final-cta__inner{position:relative;max-width:580px;margin:0 auto}
+.final-cta__title{font-size:clamp(30px,4vw,50px);margin-bottom:14px}
+.final-cta__sub{font-size:16px;color:var(--text-muted);margin-bottom:36px;line-height:1.7}
+.final-cta__btns{display:flex;flex-direction:column;align-items:center;gap:14px}
+.final-cta__main{font-size:16px;padding:17px 38px}
+.final-cta__note{font-size:13px;color:var(--text-muted)}
+.final-cta__soft{font-size:14px;color:var(--text-muted);border-bottom:1px dashed var(--text-muted);padding-bottom:1px;transition:color .2s}
+.final-cta__soft:hover{color:var(--text)}
+
+/* ════════════════════════════════════════
+   FOOTER
+════════════════════════════════════════ */
+.footer{border-top:1px solid var(--border);padding:56px 0 30px}
+.footer__top{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;margin-bottom:44px}
+.footer__tagline{font-size:14px;color:var(--text-muted);line-height:1.6;margin:10px 0 18px}
+.footer__socials{display:flex;gap:9px}
+.footer__social{width:34px;height:34px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;transition:border-color .2s}
+.footer__social:hover{border-color:var(--primary)}
+.footer__col-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:14px}
+.footer__links{display:flex;flex-direction:column;gap:9px}
+.footer__links a{font-size:14px;color:var(--text-muted);transition:color .2s}
+.footer__links a:hover{color:var(--text)}
+.footer__bottom{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;padding-top:28px;border-top:1px solid var(--border);font-size:13px;color:var(--text-muted)}
+.footer__legal{display:flex;gap:18px;flex-wrap:wrap}
+.footer__legal a:hover{color:var(--text)}
+
+/* ════════════════════════════════════════
+   STICKY MOBILE CTA
+════════════════════════════════════════ */
+.sticky-cta{display:none;position:fixed;bottom:0;left:0;right:0;padding:12px 16px;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));background:rgba(7,11,20,.95);backdrop-filter:blur(16px);border-top:1px solid var(--border);z-index:900}
+.sticky-cta .btn{width:100%;justify-content:center}
+
+/* ════════════════════════════════════════
+   RESPONSIVE
+════════════════════════════════════════ */
+@media(max-width:1024px){
+  .bento{grid-template-columns:repeat(2,1fr)}
+  .bc--wide{grid-column:span 2}
+  .footer__top{grid-template-columns:1fr 1fr}
+}
+@media(max-width:768px){
+  section{padding:64px 0}
+  .nav{display:none}
+  .burger{display:flex}
+  .header__actions .btn{display:none}
+  .hero{padding:96px 0 56px;min-height:auto}
+  .hero__inner{grid-template-columns:1fr;gap:44px}
+  .hero__visual{order:-1}
+  .bot-window{max-width:100%}
+  .fc{display:none}
+  .stats{gap:28px}
+  .stat__num{font-size:30px}
+  .pain-grid{grid-template-columns:1fr}
+  .bento{grid-template-columns:1fr}
+  .bc--wide{grid-column:span 1}
+  .comp-grid{grid-template-columns:1fr}
+  .testi-grid{grid-template-columns:1fr}
+  .price-grid{grid-template-columns:1fr}
+  .price-card--hit{transform:none}
+  .price-card--hit:hover{transform:translateY(-4px)}
+  .footer__top{grid-template-columns:1fr;gap:28px}
+  .footer__bottom{flex-direction:column;text-align:center}
+  .footer__legal{justify-content:center}
+  .sticky-cta{display:block}
+  body{padding-bottom:70px}
+  .final-cta__main{width:100%;justify-content:center}
+  .testi-summary{gap:24px}
+}
+@media(max-width:480px){
+  .container{padding:0 16px}
+  .stats{flex-direction:column;gap:20px}
+  .platforms{gap:6px}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+  .reveal{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header" id="header">
+  <div class="container">
+    <div class="header__inner">
+      <a href="#" class="logo"><div class="logo__dot"></div>neirobot</a>
+      <nav class="nav">
+        <a href="#how">Как работает</a>
+        <a href="#features">Возможности</a>
+        <a href="#pricing">Тарифы</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+      <div style="display:flex;align-items:center;gap:12px">
+        <a href="#" class="btn btn-primary">Попробовать бесплатно</a>
+        <button class="burger" id="burger" aria-label="Меню">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="mobile-menu" id="mobile-menu">
+    <a href="#how" class="mnav">Как работает</a>
+    <a href="#features" class="mnav">Возможности</a>
+    <a href="#pricing" class="mnav">Тарифы</a>
+    <a href="#faq" class="mnav">FAQ</a>
+    <a href="#" class="btn btn-primary">Запустить бота бесплатно →</a>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="aurora">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+  <div class="container">
+    <div class="hero__inner">
+      <div class="hero__content">
+        <div class="hero__badge"><span class="badge">⚡ Работает прямо в Telegram</span></div>
+        <h1 class="hero__title">
+          Ваш канал <span class="gradient-text" id="typeword">публикует</span><br>
+          контент каждый день —<br>пока вы заняты бизнесом
+        </h1>
+        <p class="hero__subtitle">neirobot сам придумывает темы, пишет посты и публикует их по расписанию. Подключите раз — канал работает без вас.</p>
+        <div>
+          <a href="#" class="btn btn-primary" style="font-size:16px;padding:15px 30px">Запустить бота бесплатно →</a>
+          <div class="hero__hint">Без регистрации на сайте. Настройка за 5 минут в Telegram.</div>
+        </div>
+        <div class="hero__proof">
+          <div class="stars">★★★★½</div>
+          <div class="hero__proof-text"><strong>2 400+</strong> каналов уже на автопилоте</div>
+        </div>
+      </div>
+      <div class="hero__visual">
+        <div class="bot-window">
+          <div class="bot-header">
+            <div class="bot-avatar">🤖</div>
+            <div>
+              <div class="bot-name">neirobot</div>
+              <div class="bot-status">● онлайн</div>
+            </div>
+          </div>
+          <div class="chat" id="hero-chat">
+            <div class="msg msg-user">Напиши пост про утренний кофе</div>
+            <div class="msg msg-bot" id="hero-reply">
+              <div class="typing"><div class="td"></div><div class="td"></div><div class="td"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="fc fc-1">✅ Пост написан за 3 сек</div>
+        <div class="fc fc-2">📈 +240% охват</div>
+        <div class="fc fc-3">📅 Опубликовано в 10:00</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROOF STRIP -->
+<div class="proof-strip">
+  <div class="container">
+    <div class="proof-strip__inner">
+      <div class="platforms">
+        <span class="platform-lbl">Публикует в:</span>
+        <div class="platform-pill">✈️ Telegram</div>
+        <div class="platform-pill">💙 ВКонтакте</div>
+        <div class="platform-pill">📸 Instagram</div>
+        <div class="platform-pill">🎵 TikTok</div>
+      </div>
+      <div class="stats">
+        <div class="stat reveal">
+          <span class="stat__num" data-count="47000" data-suffix="+">0</span>
+          <div class="stat__lbl">постов опубликовано</div>
+        </div>
+        <div class="stat reveal d1">
+          <span class="stat__num" data-count="2400" data-suffix="+">0</span>
+          <div class="stat__lbl">активных каналов</div>
+        </div>
+        <div class="stat reveal d2">
+          <span class="stat__num" data-count="98" data-suffix="%">0</span>
+          <div class="stat__lbl">продлевают подписку</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PROBLEM -->
+<section class="problem">
+  <div class="container">
+    <div class="problem__header reveal">
+      <div class="section-label">😤 Проблема</div>
+      <h2>Знакомо? Каждый день нужно что-то написать — а времени нет</h2>
+      <p class="problem__sub">Так живут тысячи предпринимателей и блогеров</p>
+    </div>
+    <div class="pain-grid">
+      <div class="pain-card card reveal d1"><div class="pain-icon">😮‍💨</div><div><div class="pain-title">Идеи кончаются</div><div class="pain-text">Сегодня пост есть, завтра — пустота. Контент-план рассыпается, когда нет вдохновения.</div></div></div>
+      <div class="pain-card card reveal d2"><div class="pain-icon">💸</div><div><div class="pain-title">Копирайтер дорого, фрилансер ненадёжно</div><div class="pain-text">Платишь 500–1500 ₽ за пост, а дедлайны срываются и качество скачет.</div></div></div>
+      <div class="pain-card card reveal d3"><div class="pain-icon">⏱️</div><div><div class="pain-title">Ручная публикация в 3–5 соцсетей</div><div class="pain-text">2–3 часа в день только на то, чтобы скопировать, вставить и нажать публикацию везде.</div></div></div>
+      <div class="pain-card card reveal d4"><div class="pain-icon">📉</div><div><div class="pain-title">Канал умирает без контента</div><div class="pain-text">Подписчики отписываются, охваты падают, алгоритмы понижают. Конкуренты не спят.</div></div></div>
+    </div>
+    <div class="problem__bridge reveal">А если бы это всё делал <span>бот</span> — автоматически, каждый день?</div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how" id="how">
+  <div class="container">
+    <div class="how__header reveal">
+      <div class="section-label">⚙️ Как это работает</div>
+      <h2>Настройка за 5 минут — контент каждый день</h2>
+    </div>
+    <div class="steps">
+      <div class="step reveal d1"><div class="step__left"><div class="step__num">01</div><div class="step__line"></div></div><div class="step__body"><div class="step__title">Откройте neirobot в Telegram</div><div class="step__text">Нажмите /start. Никаких регистраций, паролей, форм. Всё прямо в мессенджере.</div></div></div>
+      <div class="step reveal d2"><div class="step__left"><div class="step__num">02</div><div class="step__line"></div></div><div class="step__body"><div class="step__title">Укажите нишу и тон</div><div class="step__text">"Кофейня в Уфе, дружелюбный стиль, 1 пост в день" — этого достаточно для старта.</div></div></div>
+      <div class="step reveal d3"><div class="step__left"><div class="step__num">03</div><div class="step__line"></div></div><div class="step__body"><div class="step__title">ИИ генерирует посты под вашу аудиторию</div><div class="step__text">Тексты с учётом тематики, сезонности и вашего голоса. Каждый раз уникально.</div></div></div>
+      <div class="step reveal d4"><div class="step__left"><div class="step__num">04</div><div class="step__line"></div></div><div class="step__body"><div class="step__title">Редактируйте или публикуйте сразу</div><div class="step__text">Видите каждый пост до выхода. Можете поправить одним сообщением или одобрить в клик.</div></div></div>
+      <div class="step reveal d5"><div class="step__left"><div class="step__num">05</div><div class="step__line"></div></div><div class="step__body"><div class="step__title">Бот публикует по расписанию</div><div class="step__text">В нужное время, в нужные соцсети — без вашего участия. Даже в отпуске.</div></div></div>
+    </div>
+    <div class="how__cta reveal"><a href="#" class="btn btn-primary">Попробовать 7 дней бесплатно →</a></div>
+  </div>
+</section>
+
+<!-- LIVE DEMO -->
+<section id="demo">
+  <div class="container">
+    <div class="demo__header reveal">
+      <div class="section-label">🔴 Живое демо</div>
+      <h2>Посмотрите, как это работает</h2>
+      <p class="demo__sub">Выберите нишу — бот сгенерирует реальный пост</p>
+    </div>
+    <div class="demo__wrap reveal">
+      <div class="niche-btns">
+        <button class="niche-btn active" data-niche="coffee">☕ Кофейня</button>
+        <button class="niche-btn" data-niche="psych">🧠 Психолог</button>
+        <button class="niche-btn" data-niche="shop">🛍️ Магазин</button>
+        <button class="niche-btn" data-niche="blog">✍️ Блог</button>
+      </div>
+      <div class="demo-window">
+        <div class="demo-bar">
+          <div class="demo-dots"><div class="demo-dot"></div><div class="demo-dot"></div><div class="demo-dot"></div></div>
+          <div class="demo-bar-title">neirobot — генерация поста</div>
+        </div>
+        <div class="demo-body">
+          <div class="demo-prompt-row">
+            <div class="demo-prompt-icon">👤</div>
+            <div class="demo-prompt-txt" id="demo-prompt">Напиши пост для кофейни на понедельник</div>
+          </div>
+          <div class="demo-status" id="demo-status">✅ Готово!</div>
+          <div class="demo-output" id="demo-output">☕ Понедельник — это не страшно, если начать его правильно.
+
+Мы уже ждём вас с 8 утра. Свежая обжарка, горячий американо и кусочек тишины перед рабочим днём.
+
+Первый кофе бодрит. Второй — вдохновляет. Третий — уже просто привычка 😄
+
+Заходите, будем рады!
+📍 ул. Ленина, 42 · Пн–Пт 8:00–22:00</div>
+          <span class="cursor"></span>
+        </div>
+        <div class="demo-footer">
+          <div class="demo-timer" id="demo-timer">Сгенерировано за 2.4 сек</div>
+          <button class="demo-regen" id="demo-regen">↻ Сгенерировать ещё</button>
+        </div>
+      </div>
+      <div class="demo-cta"><a href="#" class="btn btn-primary">Получить первый пост прямо сейчас →</a></div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES BENTO -->
+<section id="features">
+  <div class="container">
+    <div class="features__header reveal">
+      <div class="section-label">✨ Возможности</div>
+      <h2>Всё, что нужно для автоматического контента</h2>
+    </div>
+    <div class="bento">
+      <div class="bc bc--wide reveal d1"><div class="bc__icon">🧠</div><div class="bc__title">ИИ под вашу нишу</div><div class="bc__text">Бот учитывает тематику вашего бизнеса, лексику аудитории и тон голоса. Два канала в одной нише получат разные тексты — не шаблоны.</div></div>
+      <div class="bc reveal d2"><div class="bc__icon">📅</div><div class="bc__title">Авторасписание</div><div class="bc__text">1, 3 или 5 постов в день — задаёте частоту один раз. Бот сам выбирает лучшее время.</div></div>
+      <div class="bc reveal d1"><div class="bc__icon">📊</div><div class="bc__title">Аналитика охватов</div><div class="bc__text">Видите, какие посты работают лучше. Бот учится и улучшает контент на основе статистики.</div></div>
+      <div class="bc reveal d2"><div class="bc__icon">📱</div><div class="bc__title">5+ соцсетей из одного места</div><div class="bc__text">Telegram, ВКонтакте, Instagram — один план, публикация везде одновременно.</div></div>
+      <div class="bc reveal d3"><div class="bc__icon">✏️</div><div class="bc__title">Редактирование перед публикацией</div><div class="bc__text">Хотите — проверьте и поправьте. Не хотите — пусть выходит сам. Вы решаете.</div></div>
+      <div class="bc bc--wide bc--accent reveal d1"><div class="bc__icon">🌙</div><div class="bc__title">Работает без вас — даже в отпуске</div><div class="bc__text">Бот не болеет, не уходит в отпуск и не просит повышения. Канал активен 365 дней в году, пока вы занимаетесь настоящим бизнесом.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- BEFORE / AFTER -->
+<section class="comparison">
+  <div class="container">
+    <div class="comparison__header reveal">
+      <div class="section-label">⚖️ Сравнение</div>
+      <h2>Жизнь до и после neirobot</h2>
+    </div>
+    <div class="comp-grid">
+      <div class="comp-col comp-col--bad reveal d1">
+        <div class="comp-head">❌ Без neirobot</div>
+        <div class="comp-item"><span class="ci" style="color:#f87171">✗</span><span>2–3 часа в день на написание постов вручную</span></div>
+        <div class="comp-item"><span class="ci" style="color:#f87171">✗</span><span>"Что сегодня написать?" — каждый день заново</span></div>
+        <div class="comp-item"><span class="ci" style="color:#f87171">✗</span><span>Фрилансер срывает дедлайны</span></div>
+        <div class="comp-item"><span class="ci" style="color:#f87171">✗</span><span>Канал молчит, когда нет сил и времени</span></div>
+        <div class="comp-item"><span class="ci" style="color:#f87171">✗</span><span>500–1500 ₽ за один пост у копирайтера</span></div>
+      </div>
+      <div class="comp-col comp-col--good reveal d2">
+        <div class="comp-head">✅ С neirobot</div>
+        <div class="comp-item"><span class="ci" style="color:#34d399">✓</span><span>5 минут на настройку один раз</span></div>
+        <div class="comp-item"><span class="ci" style="color:#34d399">✓</span><span>Идеи генерирует AI автоматически</span></div>
+        <div class="comp-item"><span class="ci" style="color:#34d399">✓</span><span>Бот публикует точно по расписанию</span></div>
+        <div class="comp-item"><span class="ci" style="color:#34d399">✓</span><span>Контент выходит даже в отпуске</span></div>
+        <div class="comp-item"><span class="ci" style="color:#34d399">✓</span><span>13 ₽ за пост на тарифе Про</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section id="reviews">
+  <div class="container">
+    <div class="testimonials__header reveal">
+      <div class="section-label">💬 Отзывы</div>
+      <h2>Что говорят те, кто уже на автопилоте</h2>
+    </div>
+    <div class="testi-grid">
+      <div class="card testi-card reveal d1">
+        <div class="testi-stars">★★★★☆</div>
+        <div class="testi-quote">"Раньше тратила 3 часа в неделю на посты. После подключения neirobot канал выходит 5 раз в неделю, а я занимаюсь клиентами. За месяц — +340 подписчиков."</div>
+        <div class="testi-author"><div class="testi-ava ava-1">М</div><div><div class="testi-name">Марина К.</div><div class="testi-role">Психолог · 2 800 подписчиков</div></div></div>
+      </div>
+      <div class="card testi-card reveal d2">
+        <div class="testi-stars">★★★★½</div>
+        <div class="testi-quote">"Не верил, что AI напишет нормально про кофе. Оказалось — пишет лучше, чем я сам. Подписчики не заметили разницу, а охваты выросли на 40% за месяц."</div>
+        <div class="testi-author"><div class="testi-ava ava-2">Д</div><div><div class="testi-name">Дмитрий Л.</div><div class="testi-role">Владелец кофейни · Екатеринбург</div></div></div>
+      </div>
+      <div class="card testi-card reveal d3">
+        <div class="testi-stars">★★★★★</div>
+        <div class="testi-quote">"Раньше на 8 каналов клиентов уходил весь день. Сейчас neirobot делает 80% работы — я только проверяю. Взяла 4 новых клиента."</div>
+        <div class="testi-author"><div class="testi-ava ava-3">А</div><div><div class="testi-name">Алина Р.</div><div class="testi-role">SMM-менеджер · 8 каналов</div></div></div>
+      </div>
+    </div>
+    <div class="testi-summary reveal">
+      <div class="stat"><div class="ts-val gradient-text">★ 4.7</div><div class="ts-lbl">средняя оценка</div></div>
+      <div class="stat"><div class="ts-val gradient-text">2 400+</div><div class="ts-lbl">каналов подключено</div></div>
+      <div class="stat"><div class="ts-val gradient-text">47 000+</div><div class="ts-lbl">постов опубликовано</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing" id="pricing">
+  <div class="container">
+    <div class="pricing__header reveal">
+      <div class="section-label">💳 Тарифы</div>
+      <h2>Простые цены. Никаких сюрпризов.</h2>
+    </div>
+    <div class="price-toggle reveal">
+      <span class="ptoggle-lbl">Ежемесячно</span>
+      <label class="toggle-wrap"><input type="checkbox" id="ptoggle"><span class="toggle-track"></span></label>
+      <span class="ptoggle-lbl">Ежегодно <span class="toggle-badge">−20%</span></span>
+    </div>
+    <div class="price-grid">
+      <div class="price-card reveal d1">
+        <div class="price-name">Старт</div>
+        <div class="price-amount-row"><span class="price-cur">₽</span><span class="price-num" data-monthly="990" data-yearly="792">990</span><span class="price-per">/мес</span></div>
+        <div class="price-day">≈ 33 ₽ в день</div>
+        <div class="price-features">
+          <div class="pf pf--yes"><span class="pf-check">✓</span> 1 канал</div>
+          <div class="pf pf--yes"><span class="pf-check">✓</span> 30 постов/месяц</div>
+          <div class="pf pf--yes"><span class="pf-check">✓</span> Генерация текста</div>
+          <div class="pf"><span class="pf-dash">—</span> Автопубликация</div>
+          <div class="pf"><span class="pf-dash">—</span> Аналитика</div>
+          <div class="pf pf--yes"><span class="pf-check">✓</span> Ответ в течение 48 часов</div>
+        </div>
+        <a href="#" class="btn btn-secondary">Начать бесплатно →</a>
+      </div>
+      <div class="price-card price-card--hit reveal d2">
+        <div class="price-popular">★ Популярный</div>
+        <div class="price-name">Про</div>
+        <div class="price-amount-row"><span class="price-cur">₽</span><span class="price-num" data-monthly="1990" data-yearly="1592">1 990</span><span class="price-per">/мес</span></div>
+        <div class="price-day">≈ 66 ₽ в день</div>
+        <div class="price-features">
+          <div class="pf pf--yes"><span class="pf-check">✓</span> 5 каналов</div>
+          <div class="pf pf--yes"><span class="pf-check">✓</span> 150 постов/месяц</div>
+          <div class="pf pf--yes"><span class="pf-check">✓</span> Генерация текста</div>
+          <div class="pf pf--yes"><span class="pf-check">✓</span> Автопубликация</div>
+          <div class="pf pf--yes"><span class="pf-check">✓</span> Аналитика охватов</div>
+          <div class="pf pf--yes"><span class="pf-check">✓</span> Ответ в течение 24 часов</div>
+        </div>
+        <a href="#" class="btn btn-primary">Начать бесплатно →</a>
+      </div>
+      <div class="price-card reveal d3">
+        <div class="price-name">Агентство</div>
+        <div class="price-amount-row"><span class="price-cur">₽</span><span class="price-num" data-monthly="4990" data-yearly="3992">4 990</span><span class="price-per">/мес</span></div>
+        <div class="price-day">≈ 166 ₽ в день</div>
+        <div class="price-features">
+          <div class="pf pf--yes"><span class="pf-check">✓</span> 20 каналов</div>
+          <div class="pf pf--yes"><span class="pf-check">✓</span> Безлимит постов</div>
+          <div class="pf pf--yes"><span class="pf-check">✓</span> Генерация текста</div>
+          <div class="pf pf--yes"><span class="pf-check">✓</span> Автопубликация</div>
+          <div class="pf pf--yes"><span class="pf-check">✓</span> Аналитика + API доступ</div>
+          <div class="pf pf--yes"><span class="pf-check">✓</span> Приоритетная поддержка</div>
+        </div>
+        <a href="#" class="btn btn-secondary">Начать бесплатно →</a>
+      </div>
+    </div>
+    <div class="pricing__note reveal">7 дней бесплатно на любом тарифе. Карта не нужна.<br>Отменить в любой момент — одна команда боту.</div>
+    <div class="pricing__roi reveal"><strong>Один пост у копирайтера — 500–1500 ₽.</strong><br>На тарифе Про — 150 постов за 1990 ₽. Это <strong>13 ₽ за пост.</strong></div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+  <div class="container">
+    <div class="faq__header reveal">
+      <div class="section-label">❓ FAQ</div>
+      <h2>Вопросы, которые обычно задают</h2>
+    </div>
+    <div class="faq-list">
+      <div class="faq-item reveal d1"><button class="faq-q">Нужны ли технические знания?<span class="faq-chevron">▾</span></button><div class="faq-ans"><div class="faq-ans-inner">Нет. Всё настраивается прямо в Telegram за 5 минут. Никакого кода, API или регистраций на сторонних сайтах. Если умеете писать в мессенджер — справитесь.</div></div></div>
+      <div class="faq-item reveal d2"><button class="faq-q">Тексты будут одинаковыми у всех?<span class="faq-chevron">▾</span></button><div class="faq-ans"><div class="faq-ans-inner">Нет. Бот учитывает вашу нишу, лексику и тон голоса. Два канала в одной теме получат разные тексты. Вы можете редактировать любой пост до публикации.</div></div></div>
+      <div class="faq-item reveal d3"><button class="faq-q">Безопасно ли давать боту доступ к каналу?<span class="faq-chevron">▾</span></button><div class="faq-ans"><div class="faq-ans-inner">Да. Бот работает через официальный Telegram Bot API. Доступа к личным сообщениям нет. Отключить можно в любой момент в настройках Telegram — одной кнопкой.</div></div></div>
+      <div class="faq-item reveal d4"><button class="faq-q">Что если контент мне не понравится?<span class="faq-chevron">▾</span></button><div class="faq-ans"><div class="faq-ans-inner">7 дней бесплатного доступа без карты — проверьте сами. Если после оплаты что-то пошло не так — возвращаем деньги в течение 14 дней без вопросов.</div></div></div>
+      <div class="faq-item reveal d5"><button class="faq-q">Чем лучше, чем просто использовать ChatGPT?<span class="faq-chevron">▾</span></button><div class="faq-ans"><div class="faq-ans-inner">ChatGPT требует вводить промпты вручную каждый раз и ничего не публикует сам. neirobot делает всё автоматически по расписанию: генерирует, согласует и публикует в соцсети.</div></div></div>
+      <div class="faq-item reveal d6"><button class="faq-q">Можно ли отменить подписку?<span class="faq-chevron">▾</span></button><div class="faq-ans"><div class="faq-ans-inner">Да, в любой момент — одна команда боту в Telegram. Без звонков, форм и "подождите, мы вас соединим". Никакого автосписания без вашего согласия.</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="final-cta">
+  <div class="container">
+    <div class="final-cta__inner reveal">
+      <div class="section-label" style="justify-content:center;margin-bottom:18px">🚀 Начать</div>
+      <h2 class="final-cta__title">Начните публиковать контент <span class="gradient-text">сегодня</span></h2>
+      <p class="final-cta__sub">Настройка за 5 минут. Первые 7 дней — бесплатно.<br>Канал начинает работать с первого дня.</p>
+      <div class="final-cta__btns">
+        <a href="#" class="btn btn-primary final-cta__main">Запустить Neirobot →</a>
+        <div class="final-cta__note">Без регистрации на сайте. Без карты. Отменить в 1 клик.</div>
+        <a href="#demo" class="final-cta__soft">Хочу сначала посмотреть демо ↓</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer__top">
+      <div>
+        <div class="logo" style="margin-bottom:10px"><div class="logo__dot"></div>neirobot</div>
+        <p class="footer__tagline">Ваш AI-копирайтер и SMM на автопилоте. Пишет, планирует и публикует контент — пока вы занимаетесь бизнесом.</p>
+        <div class="footer__socials">
+          <a href="#" class="footer__social" title="Telegram">✈️</a>
+          <a href="#" class="footer__social" title="ВКонтакте">💙</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer__col-title">Продукт</div>
+        <div class="footer__links"><a href="#how">Как работает</a><a href="#features">Возможности</a><a href="#pricing">Тарифы</a><a href="#reviews">Отзывы</a></div>
+      </div>
+      <div>
+        <div class="footer__col-title">Компания</div>
+        <div class="footer__links"><a href="#">О нас</a><a href="#">Блог</a><a href="#">Контакты</a></div>
+      </div>
+      <div>
+        <div class="footer__col-title">Поддержка</div>
+        <div class="footer__links"><a href="#">Telegram-поддержка</a><a href="#">База знаний</a><a href="#">Статус системы</a></div>
+      </div>
+    </div>
+    <div class="footer__bottom">
+      <div>© 2026 neirobot. Все права защищены.</div>
+      <div class="footer__legal"><a href="#">Политика конфиденциальности</a><a href="#">Оферта</a><a href="#">Возврат</a></div>
+    </div>
+  </div>
+</footer>
+
+<!-- STICKY MOBILE CTA -->
+<div class="sticky-cta"><a href="#" class="btn btn-primary">Запустить бота бесплатно →</a></div>
+
+<script>
+// ── STICKY HEADER
+(function(){
+  var h=document.getElementById('header');
+  window.addEventListener('scroll',function(){h.classList.toggle('scrolled',window.scrollY>40)},{passive:true});
+})();
+
+// ── BURGER MENU
+(function(){
+  var btn=document.getElementById('burger'),menu=document.getElementById('mobile-menu');
+  btn.addEventListener('click',function(){
+    var open=menu.classList.toggle('open');
+    var spans=btn.querySelectorAll('span');
+    if(open){spans[0].style.transform='rotate(45deg) translate(5px,5px)';spans[1].style.opacity='0';spans[2].style.transform='rotate(-45deg) translate(5px,-5px)'}
+    else{spans.forEach(function(s){s.style.transform='';s.style.opacity=''})}
+  });
+  menu.querySelectorAll('a').forEach(function(a){
+    a.addEventListener('click',function(){
+      menu.classList.remove('open');
+      btn.querySelectorAll('span').forEach(function(s){s.style.transform='';s.style.opacity=''});
+    });
+  });
+})();
+
+// ── SCROLL REVEAL
+(function(){
+  var obs=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){if(e.isIntersecting)e.target.classList.add('visible')});
+  },{threshold:0.1,rootMargin:'0px 0px -36px 0px'});
+  document.querySelectorAll('.reveal').forEach(function(el){obs.observe(el)});
+})();
+
+// ── ANIMATED COUNTERS
+(function(){
+  function run(el){
+    var target=parseInt(el.dataset.count),suffix=el.dataset.suffix||'',dur=1800,start=performance.now();
+    function ease(t){return 1-Math.pow(1-t,3)}
+    function tick(now){
+      var p=Math.min((now-start)/dur,1);
+      el.textContent=Math.round(target*ease(p)).toLocaleString('ru-RU')+suffix;
+      if(p<1)requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+  var obs=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){if(e.isIntersecting){run(e.target);obs.unobserve(e.target)}});
+  },{threshold:0.5});
+  document.querySelectorAll('[data-count]').forEach(function(el){obs.observe(el)});
+})();
+
+// ── TYPEWRITER
+(function(){
+  var el=document.getElementById('typeword');
+  if(!el)return;
+  var words=['публикует','пишет','планирует','автоматизирует'],cur=0,idx=0,del=false;
+  function tick(){
+    var w=words[cur];
+    if(!del){el.textContent=w.slice(0,++idx);if(idx===w.length){del=true;setTimeout(tick,2200);return}}
+    else{el.textContent=w.slice(0,--idx);if(idx===0){del=false;cur=(cur+1)%words.length}}
+    setTimeout(tick,del?55:100);
+  }
+  setTimeout(tick,1400);
+})();
+
+// ── HERO CHAT ANIMATION
+(function(){
+  var reply=document.getElementById('hero-reply');
+  if(!reply)return;
+  setTimeout(function(){
+    reply.innerHTML='☕ Понедельник — это не страшно, если начать его правильно! Ждём вас с 8 утра. Свежая обжарка и уютная атмосфера ☕';
+  },2600);
+})();
+
+// ── LIVE DEMO
+(function(){
+  var niches={
+    coffee:{
+      prompt:'Напиши пост для кофейни на понедельник',
+      texts:['☕ Понедельник — это не страшно, если начать его правильно.\n\nМы уже ждём вас с 8 утра. Свежая обжарка, горячий американо и кусочек тишины перед рабочим днём.\n\nЗаходите, будем рады!\n📍 ул. Ленина, 42 · Пн–Пт 8:00–22:00',
+              '☕ А вы знаете, что правильно заваренный кофе улучшает концентрацию?\n\nМы знаем. Поэтому завариваем каждую чашку с любовью.\n\nСегодня пробуем новый сорт из Эфиопии — приходите оценить!\n📍 Ждём вас с 8:00']
+    },
+    psych:{
+      prompt:'Напиши пост для психолога на тему тревоги',
+      texts:['🌿 Тревога — это не слабость.\n\nЭто сигнал, что что-то важное требует вашего внимания. Вопрос не в том, как избавиться от тревоги — а в том, что она пытается вам сказать.\n\nЕсли хотите разобраться — запись открыта 👇',
+              '🧠 3 вещи, которые реально помогают при тревоге:\n\n1. Назвать её вслух: "Я сейчас тревожусь"\n2. Заземление: 5 вещей, которые видите\n3. Медленный выдох — дольше, чем вдох\n\nПростые техники работают. Сохраните 💙']
+    },
+    shop:{
+      prompt:'Напиши пост для интернет-магазина одежды',
+      texts:['🛍️ Новая коллекция уже в наличии!\n\nСвежие поступления:\n✓ Льняные брюки — 5 расцветок\n✓ Оверсайз-рубашки — идеал на лето\n✓ Платья-комбинации — хит сезона\n\nДоставка 1–3 дня. Примерка перед оплатой 👆',
+              '⚡ Только сегодня — скидка 20% на летнюю коллекцию!\n\nПромокод: ЛЕТО20\n\n📦 Бесплатная доставка от 3000 ₽\n🔄 Возврат в течение 14 дней\n\nСмотрите каталог по ссылке в профиле 👆']
+    },
+    blog:{
+      prompt:'Напиши пост для личного блога про продуктивность',
+      texts:['⏰ Я перестал планировать день с утра — и стал делать больше.\n\nЗвучит парадоксально? Вот в чём дело: утром мозг свежий, и это лучшее время для сложных задач — а не для просмотра списка дел.\n\nПлан — вечером. Работа — утром. Попробуйте неделю 👇',
+              '🎯 Один вопрос, который изменил мою продуктивность:\n\n"Если бы я мог сделать только одну вещь сегодня — что это было бы?"\n\nВсё остальное — потом. Только после главного.\n\nКакой ваш один главный приоритет сегодня? 💬']
+    }
+  };
+
+  var cur='coffee',busy=false,iv=null;
+  var promptEl=document.getElementById('demo-prompt');
+  var statusEl=document.getElementById('demo-status');
+  var outputEl=document.getElementById('demo-output');
+  var timerEl=document.getElementById('demo-timer');
+  var regenBtn=document.getElementById('demo-regen');
+
+  function generate(niche){
+    if(busy)return;
+    busy=true;cur=niche;
+    var data=niches[niche];
+    var text=data.texts[Math.floor(Math.random()*data.texts.length)];
+    promptEl.textContent=data.prompt;
+    outputEl.textContent='';
+    statusEl.textContent='🤖 Анализирую запрос...';
+    var t0=Date.now();
+    clearInterval(iv);
+    setTimeout(function(){
+      statusEl.textContent='✍️ Генерирую текст...';
+      var i=0;
+      iv=setInterval(function(){
+        outputEl.textContent+=text[i++];
+        outputEl.scrollTop=outputEl.scrollHeight;
+        if(i>=text.length){
+          clearInterval(iv);
+          var sec=((Date.now()-t0)/1000).toFixed(1);
+          statusEl.textContent='✅ Готово!';
+          timerEl.textContent='Сгенерировано за '+sec+' сек';
+          busy=false;
+        }
+      },16);
+    },1100);
+  }
+
+  document.querySelectorAll('.niche-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      document.querySelectorAll('.niche-btn').forEach(function(b){b.classList.remove('active')});
+      btn.classList.add('active');
+      generate(btn.dataset.niche);
+    });
+  });
+  regenBtn.addEventListener('click',function(){generate(cur)});
+})();
+
+// ── PRICING TOGGLE
+(function(){
+  var tog=document.getElementById('ptoggle');
+  if(!tog)return;
+  tog.addEventListener('change',function(){
+    var yearly=tog.checked;
+    document.querySelectorAll('.price-num').forEach(function(el){
+      var v=yearly?parseInt(el.dataset.yearly):parseInt(el.dataset.monthly);
+      el.textContent=v.toLocaleString('ru-RU');
+    });
+  });
+})();
+
+// ── FAQ ACCORDION
+(function(){
+  document.querySelectorAll('.faq-item').forEach(function(item){
+    item.querySelector('.faq-q').addEventListener('click',function(){
+      var isOpen=item.classList.contains('open');
+      document.querySelectorAll('.faq-item').forEach(function(i){
+        i.classList.remove('open');
+        i.querySelector('.faq-ans').style.maxHeight='0';
+      });
+      if(!isOpen){
+        item.classList.add('open');
+        item.querySelector('.faq-ans').style.maxHeight=item.querySelector('.faq-ans').scrollHeight+'px';
+      }
+    });
+  });
+})();
+
+// ── SMOOTH SCROLL
+document.querySelectorAll('a[href^="#"]').forEach(function(a){
+  a.addEventListener('click',function(e){
+    var id=a.getAttribute('href');
+    if(id==='#')return;
+    var target=document.querySelector(id);
+    if(target){e.preventDefault();window.scrollTo({top:target.getBoundingClientRect().top+window.scrollY-80,behavior:'smooth'})}
+  });
+});
+</script>
+</body>
+</html>
